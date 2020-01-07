@@ -1,5 +1,23 @@
+//server code
+
 #include <Pnet\IncludeMe.h>
+#include <iostream>
+using namespace PNet;
 
 int main() {
-	int val = PNet::ReturnFive();
+	if (Network::Initialize()) {
+		std::cout << "Winsock api successfully initialized." << std::endl;
+		Socket socket;
+		if (socket.Create() == PResult::P_Success) {
+			std::cout << "Socket successfully created." << std::endl;
+			socket.Close();
+		}
+		else {
+			std::cerr << "Socket failed to create." << std::endl;
+		}
+	}
+
+	Network::Shutdown();
+	system("Pause"); 
+	return 0;
 }
