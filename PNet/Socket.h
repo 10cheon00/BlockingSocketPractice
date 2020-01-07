@@ -2,6 +2,8 @@
 #include "SocketHandle.h"
 #include "PResult.h"
 #include "IPVersion.h"
+#include "SocketOption.h"
+#include "IPEndpoint.h"
 
 namespace PNet {
 	class Socket {
@@ -13,6 +15,7 @@ namespace PNet {
 		SocketHandle GetHandle();
 		IPVersion GetIPVersion();
 	private:
+		PResult SetSocketOption(SocketOption option, BOOL value);
 		IPVersion ipversion = IPVersion::IPv4;
 		SocketHandle handle = INVALID_SOCKET;
 	};
