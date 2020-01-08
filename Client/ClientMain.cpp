@@ -2,6 +2,7 @@
 
 #include <Pnet\IncludeMe.h>
 #include <iostream>
+
 using namespace PNet;
 
 int main() {
@@ -10,7 +11,13 @@ int main() {
 		Socket socket;
 		if (socket.Create() == PResult::P_Success) {
 			std::cout << "Socket successfully created." << std::endl;
-			socket.Close();
+			if(socket.Connect(IPEndpoint("127.0.0.1", 8574)) == PResult::P_Success){
+				std::cout << "Successfully connected to server!" << std::endl;
+				socket.Close();
+			}
+			else{
+				std::cout << "Failed to connected to server." << std::endl;
+			}
 		}
 		else {
 			std::cerr << "Socket failed to create." << std::endl;
@@ -18,5 +25,6 @@ int main() {
 	}
 
 	Network::Shutdown();
+	system("pause");
 	return 0;
 }

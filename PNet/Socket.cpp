@@ -42,6 +42,50 @@ namespace PNet {
 		return PResult::P_Success;
 	}
 
+	
+	PResult Socket::Listen(IPEndpoint endpoint, int backlog){
+		if(Bind(endpoint) != PResult::P_Success) 
+			return PResult::P_NotYetImplemented;
+
+		int result = listen(handle, backlog);
+		if(result != 0){
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}
+		return PResult::P_Success;
+	}
+
+	PResult Socket::Accept(Socket& outSocket){
+		SocketHandle acceptedConnectionHandle = accept(handle, nullptr, nullptr);
+		if(acceptedConnectionHandle == INVALID_SOCKET){
+			return PResult::P_NotYetImplemented;
+			int error = WSAGetLastError();
+		}
+		outSocket = Socket(IPVersion::IPv4, acceptedConnectionHandle);
+		return PResult::P_Success;
+	}
+
+	PResult Socket::Connect(IPEndpoint endpoint){
+		sockaddr_in addr = endpoint.GetSockaddrIPv4();
+		int result = connect(handle, (sockaddr*)(&addr), sizeof(sockaddr_in));
+		if(result != 0){
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}
+		return PResult::P_Success;
+	}
+
+	
+	PResult Socket::Bind(IPEndpoint endpoint){
+		sockaddr_in addr = endpoint.GetSockaddrIPv4();
+		int result = bind(handle, (sockaddr*)(&addr), sizeof(sockaddr_in));
+		if(result != 0){
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}
+		return PResult::P_Success;
+	}
+
 	SocketHandle Socket::GetHandle(){
 		return this->handle;
 	}
