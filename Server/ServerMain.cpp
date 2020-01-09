@@ -12,7 +12,7 @@ int main() {
 		//server to listen for connection on port 8574
 		//socket  - bind to 8574
 
-		/*IPEndpoint test("192.168.0.2",8574);
+		/*IPEndpoint test("www.naver.com",8574);
 		if(test.GetIPVersion() == IPVersion::IPv4){
 			std::cout << "Hostname : " << test.GetHostname() << std::endl;
 			std::cout << "IP : " << test.GetIPString() << std::endl;
