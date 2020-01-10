@@ -46,11 +46,11 @@ namespace PNet {
 	}
 
 	PResult Socket::Listen(IPEndpoint endpoint, int backlog){
-		if(Bind(endpoint) != PResult::P_Success) 
+		if(Bind(endpoint) != PResult::P_Success) //if Bind fails
 			return PResult::P_NotYetImplemented;
 
 		int result = listen(
-			handle, 
+			handle,		//SOCKET
 			backlog);	//maximum length of the queue of pending connections.
 		if(result != 0){
 			int error = WSAGetLastError();
@@ -86,24 +86,91 @@ namespace PNet {
 		IPEndpoint newConnectionEndpoint((sockaddr*)&addr);
 		std::cout << "New connection accepted" << std::endl;
 		newConnectionEndpoint.Print();
-		outSocket = Socket(IPVersion::IPv4, acceptedConnectionHandle);
+		outSocket = Socket(IPVersion::IPv4, acceptedConnectionHandle);//copy socket
 		return PResult::P_Success;
 	}
 
 	PResult Socket::Connect(IPEndpoint endpoint){
 		sockaddr_in addr = endpoint.GetSockaddrIPv4();
-		int result = connect(handle, (sockaddr*)(&addr), sizeof(sockaddr_in));
+		int result = connect(
+			handle,					//SOCKET
+			(sockaddr*)(&addr),		//Pointer of sockaddr structure(must have connected)
+			sizeof(sockaddr_in));	//sizeof sockaddr structure
 		if(result != 0){
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}//If error occured
+		return PResult::P_Success;
+	}
+
+	PResult Socket::Send(void* data, int numberOfBytes, int& bytesSent){
+		bytesSent = send(
+			handle,				//SOCKET
+			(const char*)data,	//Pointer to send data
+			numberOfBytes,		//length of data
+			NULL);				//Pointer to store length of data what actually sent
+
+		if(bytesSent == SOCKET_ERROR){
 			int error = WSAGetLastError();
 			return PResult::P_NotYetImplemented;
 		}
 		return PResult::P_Success;
 	}
 
-	
+	PResult Socket::Recv(void* destination, int numberOfBytes, int& bytesReceived){
+		bytesReceived = recv(
+			handle,				//SOCKET
+			(char*)destination,	//Pointer to store received data
+			numberOfBytes,		//length of data to receive
+			NULL);				//Pointer to store length of data what actually received
+
+		if(bytesReceived == 0)//If connection was gracefully closed.
+			return PResult::P_NotYetImplemented;
+		if(bytesReceived == SOCKET_ERROR){
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}
+		return PResult::P_Success;
+	}
+
+	PResult Socket::SendAll(void* data, int numberOfBytes){
+		int totalBytesSent = 0;
+		while(totalBytesSent < numberOfBytes){
+			int bytesRemaining = numberOfBytes - totalBytesSent;
+			int bytesSent = 0;
+			char* bufferOffset = (char*)data + totalBytesSent;
+			PResult result = Send(bufferOffset, bytesRemaining, bytesSent);
+			if(result != PResult::P_Success){
+				return PResult::P_NotYetImplemented;
+			}
+			totalBytesSent += bytesSent;
+		}
+		return PResult::P_Success;
+	}
+
+	PResult Socket::RecvAll(void* destination, int numberOfBytes){
+		int totalBytesReceived = 0;
+		while(totalBytesReceived < numberOfBytes){
+			int bytesRemaining = numberOfBytes - totalBytesReceived;
+			int bytesReceived = 0;
+			char* bufferOffset = (char*)destination + totalBytesReceived;
+			PResult result = Recv(bufferOffset, bytesRemaining, bytesReceived);
+			if(result != PResult::P_Success){
+				return PResult::P_NotYetImplemented;
+			}
+			totalBytesReceived += bytesReceived;
+		}
+		return PResult::P_Success;
+	}
+
 	PResult Socket::Bind(IPEndpoint endpoint){
 		sockaddr_in addr = endpoint.GetSockaddrIPv4();
-		int result = bind(handle, (sockaddr*)(&addr), sizeof(sockaddr_in));
+
+		//call bind function before call listen function.
+		int result = bind(
+			handle,					//SOCKET
+			(sockaddr*)(&addr),		//Host address Structure
+			sizeof(sockaddr_in));	//sizeof sockaddr structure
 		if(result != 0){
 			int error = WSAGetLastError();
 			return PResult::P_NotYetImplemented;

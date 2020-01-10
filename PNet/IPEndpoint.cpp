@@ -9,10 +9,13 @@ namespace PNet{
 		this->port = port;
 		
 		in_addr addr; //location to store the ipv4 address
-		int result = inet_pton(AF_INET, ip, &addr);
+		int result = inet_pton(
+			AF_INET,	//Address family
+			ip,			//IP address = 127.0.0.1
+			&addr);		//Pointer of IP address
 
-		if(result == 1){
-			if(addr.S_un.S_addr != INADDR_NONE){
+		if(result == 1){ //if no error,inet_pton function returns 1 and store network byte order to IN_ADDR structure.
+			if(addr.S_un.S_addr != INADDR_NONE){ //Address is valid?
 				ip_string = ip;
 				hostname = ip;
 				
@@ -25,14 +28,18 @@ namespace PNet{
 		}
 
 		//Attempt to resolve hostname to ipv4 address.
+		//hostname = www.google.com
 		addrinfo hints = {}; //hints will filter the results we get back for getaddrinfo.
 		hints.ai_family = AF_INET; //ipv4 adresses only
 		addrinfo* hostinfo = nullptr;
-		result = getaddrinfo(ip, NULL, &hints,&hostinfo);
-		if(result == 0){
+		result = getaddrinfo(
+			ip,				//IP address
+			NULL,			//???
+			&hints,			//Pointer of ADDRINFO structure
+			&hostinfo);		//Result. Pointer of linked list of ADDRINFO structures
+		if(result == 0){ //if no error, getaddrinfo function return 0.
 			sockaddr_in *host_addr = reinterpret_cast<sockaddr_in*>(hostinfo->ai_addr);
 
-			//host_addr->sin_addr.S_un.S_addr
 			ip_string.resize(16);
 			inet_ntop(AF_INET, &host_addr->sin_addr, &ip_string[0], 16);
 
@@ -42,7 +49,8 @@ namespace PNet{
 			memcpy(&ip_bytes[0], &ip_long, sizeof(ULONG));
 
 			ipversion = IPVersion::IPv4;
-			freeaddrinfo(hostinfo);
+
+			freeaddrinfo(hostinfo);//free addrinfo structure
 			return;
 		}
 	}
@@ -81,6 +89,7 @@ namespace PNet{
 		return this->port;
 	}
 	
+	//return SOCKADDR_IN structure which contains IP address and port, address family
 	sockaddr_in IPEndpoint::GetSockaddrIPv4(){
 		assert(ipversion == IPVersion::IPv4);
 		sockaddr_in addr = {};
@@ -89,6 +98,7 @@ namespace PNet{
 		addr.sin_port = htons(port);
 		return addr;
 	}
+
 	void IPEndpoint::Print(){
 		switch(ipversion){
 		case IPVersion::IPv4:

@@ -34,6 +34,15 @@ int main() {
 				Socket newConnection;
 				if(socket.Accept(newConnection) == PResult::P_Success){
 					std::cout << "New connection accepted." << std::endl;
+
+					char buf[256];
+					int result = PResult::P_Success;
+					while(result == PResult::P_Success){
+						result = newConnection.RecvAll(buf, 256);
+						if(result != PResult::P_Success)
+							break;
+						std::cout << buf << std::endl;
+					}
 					newConnection.Close();
 				}
 				else{
