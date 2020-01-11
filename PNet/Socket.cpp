@@ -133,6 +133,41 @@ namespace PNet {
 		return PResult::P_Success;
 	}
 
+	PResult Socket::Send(Packet& packet){
+		//Send packet size.
+		uint32_t encodePakcetSize = htonl(packet.buffer.size());
+		PResult result = SendAll(&encodePakcetSize, sizeof(uint32_t));
+		if(result != PResult::P_Success)
+			return PResult::P_GenericError;
+
+		//Send data.
+		result = SendAll(packet.buffer.data(), packet.buffer.size());
+		if(result != PResult::P_Success)
+			return PResult::P_GenericError;
+
+		return PResult::P_Success;
+	}
+
+	//packet structure = size + data
+	PResult Socket::Recv(Packet& packet){
+		packet.Clear();
+
+		//Receive data size. 
+		uint32_t encodedSize = 0;
+		PResult result = RecvAll(&encodedSize, sizeof(uint32_t));
+		if(result != PResult::P_Success)
+			return PResult::P_GenericError;
+
+		//Get data.
+		uint32_t bufferSize = ntohl(encodedSize);
+		packet.buffer.resize(bufferSize);
+		result = RecvAll(&packet.buffer[0], bufferSize);
+		if(result != PResult::P_Success)
+			return PResult::P_GenericError;
+
+		return PResult::P_Success;
+	}
+
 	PResult Socket::SendAll(const void* data, int numberOfBytes){
 		int totalBytesSent = 0;
 		while(totalBytesSent < numberOfBytes){

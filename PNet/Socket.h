@@ -5,6 +5,7 @@
 #include "SocketOption.h"
 #include "IPEndpoint.h"
 #include "Constants.h"
+#include "Packet.h"
 
 namespace PNet {
 	class Socket {
@@ -19,6 +20,9 @@ namespace PNet {
 		PResult Connect(IPEndpoint endpoint);
 		PResult Send(const void* data, int numberOfBytes, int& bytesSent);
 		PResult Recv(void* destination, int numberOfBytes, int& bytesReceived);
+		PResult Send(Packet& packet);
+		PResult Recv(Packet& packet);
+
 		PResult SendAll(const void* data, int numberOfBytes);
 		PResult RecvAll(void* destination, int numberOfBytes);
 		SocketHandle GetHandle();
