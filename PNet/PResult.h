@@ -3,6 +3,6 @@
 namespace PNet {
 	enum PResult {
 		P_Success,
-		P_NotYetImplemented,
+		P_GenericError,
 	};
 }
