@@ -5,14 +5,41 @@
 
 using namespace PNet;
 
+bool ProcessPacket(Packet& packet){
+	switch(packet.GetPacketType()){
+	case PacketType::PT_ChatMessage:
+	{
+		std::string chatmessage;
+		packet >> chatmessage;
+		std::cout << "Chat Message : " << chatmessage << std::endl;
+	}
+	break;
+	case PacketType::PT_IntegerArray:
+	{
+		uint32_t arraySize = 0;
+		packet >> arraySize;
+		std::cout << "ArraySize : " << arraySize << std::endl;
+		for(uint32_t i = 0; i < arraySize; i++){
+			uint32_t element = 0;
+			packet >> element;
+			std::cout << "Element[" << i << "] = " << element << std::endl;
+		}
+		break;
+	}
+	default: return false;
+	}
+	return true;
+}
+
 int main(){
 	if(Network::Initialize()){
 		std::cout << "Winsock api successfully initialized." << std::endl;
 
+		/*
 		//server to listen for connection on port 8574
 		//socket  - bind to 8574
 
-		/*IPEndpoint test("www.naver.com",8574);
+		IPEndpoint test("www.naver.com",8574);
 		if(test.GetIPVersion() == IPVersion::IPv4){
 			std::cout << "Hostname : " << test.GetHostname() << std::endl;
 			std::cout << "IP : " << test.GetIPString() << std::endl;
@@ -24,7 +51,8 @@ int main(){
 		}
 		else{
 			std::cerr << "This is not an ipv4 address." << std::endl;
-		}*/
+		}
+		*/
 
 		Socket socket;
 		if(socket.Create() == PResult::P_Success){
@@ -55,30 +83,29 @@ int main(){
 					}
 					*/
 
-					std::string string1, string2;
 					Packet pkt;
 					while(true){
 						PResult result = newConnection.Recv(pkt);
 						if(result != PResult::P_Success)
 							break;
-
-						pkt >> string1 >> string2;
-						std::cout << string1 << " , " << string2 << << std::endl;
+						if(!ProcessPacket(pkt))
+							break;
 					}
 					newConnection.Close();
 				}
-				else{
-					std::cout << "Failed to accepted new Connection." << std::endl;
-				}
 			}
-			else
-				std::cout << "Failed to listening on port 8574." << std::endl;
-			socket.Close();
+			else{
+				std::cout << "Failed to accepted new Connection." << std::endl;
+			}
 		}
-		else{
-			std::cerr << "Socket failed to create." << std::endl;
-		}
+		else
+			std::cout << "Failed to listening on port 8574." << std::endl;
+		socket.Close();
 	}
+	else{
+		std::cerr << "Socket failed to create." << std::endl;
+	}
+
 
 	Network::Shutdown();
 	system("Pause");

@@ -34,14 +34,30 @@ int main(){
 					Sleep(500);
 				}
 				*/
-				Packet pkt;
-				pkt << std::string("this is first string!");
-				pkt << std::string("this is second string!");
+
+				Packet stringPacket(PacketType::PT_ChatMessage);
+				stringPacket << std::string("This is my string packet~~");
+				
+				Packet integerPacket(PacketType::PT_IntegerArray);
+				uint32_t arraySize = 9;
+				uint32_t integerArray[9] = { 2,5,134,414,1,3,45,489,41 };
+				integerPacket << arraySize;
+				for(auto iter : integerArray)
+					integerPacket << iter;
+
 				while(true){
-					PResult result = socket.Send(pkt);
+					PResult result;
+					if(rand() % 2 == 0){
+						result = socket.Send(stringPacket);
+					}
+					else{
+						result = socket.Send(integerPacket);
+					}
+
 					if(result != PResult::P_Success)
 						break;
-					std::cout << "Attempting to send chunk of data.." << std::endl;
+
+					std::cout << "Attempting to send data.." << std::endl;
 					Sleep(500);
 				}
 			}

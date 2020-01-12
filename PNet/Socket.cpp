@@ -135,8 +135,8 @@ namespace PNet {
 
 	PResult Socket::Send(Packet& packet){
 		//Send packet size.
-		uint32_t encodePakcetSize = htonl(packet.buffer.size());
-		PResult result = SendAll(&encodePakcetSize, sizeof(uint32_t));
+		uint16_t encodePakcetSize = htons(packet.buffer.size());
+		PResult result = SendAll(&encodePakcetSize, sizeof(uint16_t));
 		if(result != PResult::P_Success)
 			return PResult::P_GenericError;
 
@@ -153,13 +153,15 @@ namespace PNet {
 		packet.Clear();
 
 		//Receive data size. 
-		uint32_t encodedSize = 0;
-		PResult result = RecvAll(&encodedSize, sizeof(uint32_t));
+		uint16_t encodedSize = 0;
+		PResult result = RecvAll(&encodedSize, sizeof(uint16_t));
 		if(result != PResult::P_Success)
 			return PResult::P_GenericError;
-
+		uint32_t bufferSize = ntohs(encodedSize);
+		if(bufferSize > PNet::g_MaxPacketSize)
+			return PResult::P_GenericError;
+		
 		//Get data.
-		uint32_t bufferSize = ntohl(encodedSize);
 		packet.buffer.resize(bufferSize);
 		result = RecvAll(&packet.buffer[0], bufferSize);
 		if(result != PResult::P_Success)
