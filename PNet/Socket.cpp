@@ -5,17 +5,17 @@
 namespace PNet {
 	Socket::Socket(IPVersion ipversion, SocketHandle handle)
 		:ipversion(ipversion), handle(handle){
-		assert(ipversion == IPVersion::IPv4);
+		assert(ipversion == IPVersion::IPv4 || ipversion == IPVersion::IPv6);
 	}
 
 	PResult Socket::Create(){
-		assert(ipversion == IPVersion::IPv4);
+		assert(ipversion == IPVersion::IPv4 || ipversion == IPVersion::IPv6);
 		if(handle != INVALID_SOCKET){
 			return PResult::P_GenericError;
 		}
 
 		handle = socket(	//create socket function
-			AF_INET,		//Address family 
+			(ipversion == IPVersion::IPv4) ? AF_INET : AF_INET6,		//Address family 
 			SOCK_STREAM,	//type
 			IPPROTO_TCP);	//protocol
 		if(handle == INVALID_SOCKET){
@@ -23,10 +23,9 @@ namespace PNet {
 			return PResult::P_GenericError;
 		}
 
-		if(SetSocketOption(SocketOption::TCP_NoDelay, TRUE) != PResult::P_Success){
+		if(SetSocketOption(SocketOption::TCP_NoDelay, TRUE) != PResult::P_Success)
 			return PResult::P_GenericError;
-		}
-
+		
 		return PResult::P_Success;
 	}
 
@@ -45,7 +44,44 @@ namespace PNet {
 		return PResult::P_Success;
 	}
 
+	PResult Socket::Bind(IPEndpoint endpoint){
+		assert(ipversion == endpoint.GetIPVersion());
+
+		if(ipversion == IPVersion::IPv4){//IPv4
+			sockaddr_in addr = endpoint.GetSockaddrIPv4();
+
+			//call bind function before call listen function.
+			int result = bind(
+				handle,					//SOCKET
+				(sockaddr*)(&addr),		//Host address Structure
+				sizeof(sockaddr_in));	//sizeof sockaddr structure
+			if(result != 0){
+				int error = WSAGetLastError();
+				return PResult::P_GenericError;
+			}
+			return PResult::P_Success;
+		}
+		else{//IPv6
+			sockaddr_in6 addr = endpoint.GetSockaddrIPv6();
+
+			//call bind function before call listen function.
+			int result = bind(
+				handle,					//SOCKET
+				(sockaddr*)(&addr),		//Host address Structure
+				sizeof(sockaddr_in6));	//sizeof sockaddr structure
+			if(result != 0){
+				int error = WSAGetLastError();
+				return PResult::P_GenericError;
+			}
+			return PResult::P_Success;
+		}
+	}
+
 	PResult Socket::Listen(IPEndpoint endpoint, int backlog){
+		if(ipversion == IPVersion::IPv6)
+			if(SetSocketOption(SocketOption::IPv6_only, FALSE) != PResult::P_Success)
+				return PResult::P_GenericError;
+
 		if(Bind(endpoint) != PResult::P_Success) //if Bind fails
 			return PResult::P_GenericError;
 
@@ -70,36 +106,71 @@ namespace PNet {
 		}
 
 		***********************************************/
-		sockaddr_in addr = {};
-		int len = sizeof(sockaddr_in);
-		
-		//connect client to new socket.
-		SocketHandle acceptedConnectionHandle = accept(
-			handle,				//SOCKET
-			(sockaddr*)(&addr), //sockaddr pointer to receive address of client
-			&len);				//sizeof sockaddr
-		if(acceptedConnectionHandle == INVALID_SOCKET){
-			return PResult::P_GenericError;
-			int error = WSAGetLastError();
-		}
+		assert(ipversion == IPVersion::IPv4 || ipversion == IPVersion::IPv6);
 
-		IPEndpoint newConnectionEndpoint((sockaddr*)&addr);
-		std::cout << "New connection accepted" << std::endl;
-		newConnectionEndpoint.Print();
-		outSocket = Socket(IPVersion::IPv4, acceptedConnectionHandle);//copy socket
+		if(ipversion == IPVersion::IPv4){
+			sockaddr_in addr = {};
+			int len = sizeof(sockaddr_in);
+
+			//connect client to new socket.
+			SocketHandle acceptedConnectionHandle = accept(
+				handle,				//SOCKET
+				(sockaddr*)(&addr), //sockaddr pointer to receive address of client
+				&len);				//sizeof sockaddr
+			if(acceptedConnectionHandle == INVALID_SOCKET){
+				return PResult::P_GenericError;
+				int error = WSAGetLastError();
+			}
+
+			IPEndpoint newConnectionEndpoint((sockaddr*)&addr);
+			std::cout << "New connection accepted" << std::endl;
+			newConnectionEndpoint.Print();
+			outSocket = Socket(IPVersion::IPv4, acceptedConnectionHandle);//copy socket
+		}
+		else{//IPv6
+			sockaddr_in6 addr = {};
+			int len = sizeof(sockaddr_in6);
+
+			//connect client to new socket.
+			SocketHandle acceptedConnectionHandle = accept(
+				handle,				//SOCKET
+				(sockaddr*)(&addr), //sockaddr pointer to receive address of client
+				&len);				//sizeof sockaddr
+			if(acceptedConnectionHandle == INVALID_SOCKET){
+				return PResult::P_GenericError;
+				int error = WSAGetLastError();
+			}
+
+			IPEndpoint newConnectionEndpoint((sockaddr*)&addr);
+			std::cout << "New connection accepted" << std::endl;
+			newConnectionEndpoint.Print();
+			outSocket = Socket(IPVersion::IPv6, acceptedConnectionHandle);//copy socket
+		}
 		return PResult::P_Success;
 	}
 
 	PResult Socket::Connect(IPEndpoint endpoint){
-		sockaddr_in addr = endpoint.GetSockaddrIPv4();
-		int result = connect(
-			handle,					//SOCKET
-			(sockaddr*)(&addr),		//Pointer of sockaddr structure(must have connected)
-			sizeof(sockaddr_in));	//sizeof sockaddr structure
+		assert(endpoint.GetIPVersion());
+		int result = 0;
+		if(ipversion == IPVersion::IPv4){//IPv4
+			sockaddr_in addr = endpoint.GetSockaddrIPv4();
+			result = connect(
+				handle,					//SOCKET
+				(sockaddr*)(&addr),		//Pointer of sockaddr structure(must have connected)
+				sizeof(sockaddr_in));	//sizeof sockaddr structure
+		}
+		else{//IPv6
+			sockaddr_in6 addr = endpoint.GetSockaddrIPv6();
+			result = connect(
+				handle,					//SOCKET
+				(sockaddr*)(&addr),		//Pointer of sockaddr structure(must have connected)
+				sizeof(sockaddr_in6));	//sizeof sockaddr structure
+		}
 		if(result != 0){
-			int error = WSAGetLastError();
-			return PResult::P_GenericError;
+				int error = WSAGetLastError();
+				return PResult::P_GenericError;
 		}//If error occured
+
 		return PResult::P_Success;
 	}
 
@@ -160,7 +231,7 @@ namespace PNet {
 		uint32_t bufferSize = ntohs(encodedSize);
 		if(bufferSize > PNet::g_MaxPacketSize)
 			return PResult::P_GenericError;
-		
+
 		//Get data.
 		packet.buffer.resize(bufferSize);
 		result = RecvAll(&packet.buffer[0], bufferSize);
@@ -200,20 +271,6 @@ namespace PNet {
 		return PResult::P_Success;
 	}
 
-	PResult Socket::Bind(IPEndpoint endpoint){
-		sockaddr_in addr = endpoint.GetSockaddrIPv4();
-
-		//call bind function before call listen function.
-		int result = bind(
-			handle,					//SOCKET
-			(sockaddr*)(&addr),		//Host address Structure
-			sizeof(sockaddr_in));	//sizeof sockaddr structure
-		if(result != 0){
-			int error = WSAGetLastError();
-			return PResult::P_GenericError;
-		}
-		return PResult::P_Success;
-	}
 
 	SocketHandle Socket::GetHandle(){
 		return this->handle;
@@ -233,6 +290,14 @@ namespace PNet {
 				TCP_NODELAY,			//Socket Option
 				(const char*)&value,	//Option buffer pointer
 				sizeof(value));			//buffer size
+			break;
+		case SocketOption::IPv6_only:
+			result = setsockopt(
+				handle,
+				IPPROTO_IPV6,
+				IPV6_V6ONLY,
+				(const char*)&value,
+				sizeof(value));
 			break;
 		default:
 			return PResult::P_GenericError;

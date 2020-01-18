@@ -54,10 +54,10 @@ int main(){
 		}
 		*/
 
-		Socket socket;
+		Socket socket(IPVersion::IPv6);
 		if(socket.Create() == PResult::P_Success){
 			std::cout << "Socket successfully created." << std::endl;
-			if(socket.Listen(IPEndpoint("127.0.0.1", 8574)) == PResult::P_Success){
+			if(socket.Listen(IPEndpoint("::", 8574)) == PResult::P_Success){
 				std::cout << "Socket successfully listening on port 8574." << std::endl;
 				Socket newConnection;
 				if(socket.Accept(newConnection) == PResult::P_Success){
